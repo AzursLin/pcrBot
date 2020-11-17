@@ -31,15 +31,17 @@ import kotlin.concurrent.fixedRateTimer
 
 //=================Config============================
 //Bot的QQ号
-var qqId:Long = 382950487L
+var qqId:Long = 764541109L
 //Bot的密码
 var password:String = ""
 //bigfun登录cookies
-var cookies = ""
+var cookies = "_csrf=PEzFbCQmnGlR8SOFXw55nVHc; UM_distinctid=174b4b145ef5cc-07a884135082c9-333769-1fa400-174b4b145f0d2e; sid=ig6txj12; DedeUserID=551085062; DedeUserID__ckMd5=813f4be6526ff5b9; SESSDATA=d088f2c8%2C1618302946%2C9d6ec*a1; bili_jct=5923adbaefc485a3f70b3d43fd560c5b; session-api=6c01u1g0s65lcte56bnd47thke; CNZZDATA1275376637=10395078-1600758669-https%253A%252F%252Fwww.baidu.com%252F%7C1603763664"
 //=================Config============================
+var orderArray = arrayOf("#状态","#查刀","#预约","#BOSS信息","#BOSS信息刷新")
 var daoInfoUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-day-report%2Fa&page=1&size=30"
 var guildInfoUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-day-report-collect%2Fa"
 var bossReportUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-boss-report-collect%2Fa"
+//要通知的群号 当前只会通知一个群
 var listenerGroupId = 134290932L
 var currentBossName: String? = null
 var currentLife: Long? = 0L
@@ -82,11 +84,13 @@ suspend fun main() {
                         order = "#预约"
                     }
                     when(order) {
-                        "#状态" -> it.group.sendMessage(PlainText(getGuildInfoStr()))
-                        "#查刀" -> it.group.sendMessage(PlainText(getDAO(msg)))
-                        "#预约" -> it.group.sendMessage(PlainText(bookBoss(this.sender.id,msg)))
-                        "#BOSS信息" -> it.group.sendMessage(PlainText(bossNameInfo.toString()))
-                        "#BOSS信息刷新" -> {initBossInfo();it.group.sendMessage(PlainText("刷新成功"))}
+                        "#指令" -> it.group.sendMessage(PlainText(printOrderArray()))
+                        orderArray[0] -> {it.group.sendMessage(PlainText(getGuildInfoStr()))
+                                           getGuildStatus(miraiBot)}
+                        orderArray[1] -> it.group.sendMessage(PlainText(getDAO(msg)))
+                        orderArray[2] -> it.group.sendMessage(PlainText(bookBoss(this.sender.id,msg)))
+                        orderArray[3] -> it.group.sendMessage(PlainText(bossNameInfo.toString()))
+                        orderArray[4] -> {initBossInfo();it.group.sendMessage(PlainText("刷新成功"))}
                         else -> {
                             it.group.sendMessage(PlainText("指令有误，翻乡下种番薯啦你"))
                         }
@@ -154,10 +158,13 @@ fun getGuildInfoStr():String{
     dateEnd = guildInfo.day_list?.get(0)
     dateStart = guildInfo.day_list?.get(guildInfo.day_list!!.size-1)
     val lastRanking = guildInfo.clan_info?.last_ranking
-    currentBossName = bossName
-    currentLife = current_life
-
-    return "当前 $bossName($lap_num 周目)  生命值 $current_life / $total_life " +
+    var bossSeq = 0
+    for (index in bossNameInfo.indices) {
+        if (bossName == bossNameInfo[index]) {
+            bossSeq = index+1
+        }
+    }
+    return "当前$bossSeq 号 $bossName($lap_num 周目)  生命值 $current_life / $total_life " +
             "排名 $lastRanking 出刀记录截止日 $dateEnd"
 }
 
@@ -203,37 +210,19 @@ suspend fun scheduleBoss(miraiBot:Bot){
                 println("=====================启动定时查询BOSS协程======================")
                 val guildInfo = getGuildInfoData()
                 if (guildInfo != null) {
-                    val bossName = guildInfo?.boss_info?.name
-                    val current_life = guildInfo?.boss_info?.current_life
+                    val bossName = guildInfo.boss_info?.name
+                    val current_life = guildInfo.boss_info?.current_life
                     //预约提醒
-                    if (currentBossName != bossName) {
-                        miraiBot.getGroup(listenerGroupId).sendMessage("@BOSS变更播报")
-                        miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
-                        if (bossNameInfo.isNotEmpty()) {
-                            for (index in bossNameInfo.indices) {
-                                if (bossName == bossNameInfo[index]) {
-                                    var atMenberId:List<Long> = mutableListOf()
-                                    when (index) {
-                                        0 -> {atMenberId = bookBoss1;bookBoss1=mutableListOf()}
-                                        1 -> {atMenberId = bookBoss2;bookBoss2=mutableListOf()}
-                                        2 -> {atMenberId = bookBoss3;bookBoss3=mutableListOf()}
-                                        3 -> {atMenberId = bookBoss4;bookBoss4=mutableListOf()}
-                                        4 -> {atMenberId = bookBoss5;bookBoss5=mutableListOf()}
-                                    }
-                                    if (atMenberId.isNotEmpty()) {
-                                        for (id:Long in atMenberId) {
-                                            var group = miraiBot.getGroup(listenerGroupId)
-                                            if (group.contains(id)) {
-                                                group.sendMessage(At(group[id]))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                    if (bossName != null) {
+                        if (currentBossName != bossName) {
+                            //名字变动
+                            miraiBot.getGroup(listenerGroupId).sendMessage("@BOSS变更播报")
+                            miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
+                            callBooker(bossName,miraiBot)
+                        }else if (currentLife != current_life) {
+                            miraiBot.getGroup(listenerGroupId).sendMessage("@血量变更播报")
+                            miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
                         }
-                    } else if (currentLife != current_life) {
-                        miraiBot.getGroup(listenerGroupId).sendMessage("@血量变更播报")
-                        miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
                     }
                     currentBossName = bossName
                     currentLife = current_life
@@ -257,6 +246,7 @@ fun initBossInfo(){
         var bossReportInfo = bossReportData.data
         var bossList = bossReportInfo?.boss_list
         if (bossList != null) {
+            bossNameInfo = mutableListOf()
             for (bossInfo: ReportBossInfo in bossList) {
                 bossNameInfo.add(bossInfo.boss_name?:"无名")
             }
@@ -282,4 +272,58 @@ fun bookBoss(id:Long,msg:String):String{
         return "预约成功"
     }
     return "预约失败，检查指令格式#预约+BOSS序号"
+}
+
+fun printOrderArray():String{
+    var str = ""
+    orderArray.forEach { item ->  str+= item}
+    return str
+}
+
+/**
+ * 名字有变动时触发预约提醒
+ * true 名字有变动
+ */
+suspend fun callBooker(bossName:String,miraiBot:Bot):Boolean{
+    if (bossNameInfo.isNotEmpty()) {
+        for (index in bossNameInfo.indices) {
+            if (bossName == bossNameInfo[index]) {
+                var atMenberId:List<Long> = mutableListOf()
+                when (index) {
+                    0 -> {atMenberId = bookBoss1;bookBoss1=mutableListOf()}
+                    1 -> {atMenberId = bookBoss2;bookBoss2=mutableListOf()}
+                    2 -> {atMenberId = bookBoss3;bookBoss3=mutableListOf()}
+                    3 -> {atMenberId = bookBoss4;bookBoss4=mutableListOf()}
+                    4 -> {atMenberId = bookBoss5;bookBoss5=mutableListOf()}
+                }
+                if (atMenberId.isNotEmpty()) {
+                    for (id:Long in atMenberId) {
+                        var group = miraiBot.getGroup(listenerGroupId)
+                        if (group.contains(id)) {
+                            group.sendMessage(At(group[id]))
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    return false
+}
+
+/**
+ * 检查是否要提醒预约
+ */
+suspend fun getGuildStatus(miraiBot:Bot){
+    val guildInfo = getGuildInfoData()
+    if (guildInfo != null) {
+        val bossName = guildInfo.boss_info?.name
+        val current_life = guildInfo.boss_info?.current_life
+        if (bossName != null) {
+            callBooker(bossName,miraiBot)
+        }
+        currentBossName = bossName
+        currentLife = current_life
+    }
 }
