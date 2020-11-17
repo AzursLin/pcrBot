@@ -193,6 +193,7 @@ class GroupData{
 suspend fun scheduleBoss(miraiBot:Bot){
     while (true) {
         delay(450000L)
+        println("=====================进入定时查询BOSS协程======================")
         if (dateEnd!!.isEmpty()) {
             val guildInfo = getGuildInfoData()
             if(guildInfo != null) {
