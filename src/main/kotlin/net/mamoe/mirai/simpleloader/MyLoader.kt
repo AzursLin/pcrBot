@@ -194,7 +194,11 @@ suspend fun scheduleBoss(miraiBot:Bot){
     while (true) {
         delay(450000L)
         if (dateEnd!!.isEmpty()) {
-            getGuildInfoData()
+            val guildInfo = getGuildInfoData()
+            if(guildInfo != null) {
+                dateEnd = guildInfo.day_list?.get(0)
+                dateStart = guildInfo.day_list?.get(guildInfo.day_list!!.size-1)
+            }
         }
         if (dateEnd!!.isNotEmpty()) {
             var endDate:LocalDate? = null
