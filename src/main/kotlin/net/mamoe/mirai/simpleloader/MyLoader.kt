@@ -37,7 +37,7 @@ var password:String = ""
 //bigfun登录cookies
 var cookies = "_csrf=PEzFbCQmnGlR8SOFXw55nVHc; UM_distinctid=174b4b145ef5cc-07a884135082c9-333769-1fa400-174b4b145f0d2e; sid=ig6txj12; DedeUserID=551085062; DedeUserID__ckMd5=813f4be6526ff5b9; SESSDATA=d088f2c8%2C1618302946%2C9d6ec*a1; bili_jct=5923adbaefc485a3f70b3d43fd560c5b; session-api=6c01u1g0s65lcte56bnd47thke; CNZZDATA1275376637=10395078-1600758669-https%253A%252F%252Fwww.baidu.com%252F%7C1603763664"
 //=================Config============================
-var orderArray = arrayOf("#状态","#查刀","#预约","#BOSS信息","#BOSS信息刷新")
+var orderArray = arrayOf("#状态","#查刀","#预约","#BOSS信息","#BOSS信息刷新","#帮忙预约","#当前预约列表")
 var daoInfoUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-day-report%2Fa&page=1&size=30"
 var guildInfoUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-day-report-collect%2Fa"
 var bossReportUrl = "https://www.bigfun.cn/api/feweb?target=gzlj-clan-boss-report-collect%2Fa"
@@ -82,6 +82,8 @@ suspend fun main() {
                         order = "#查刀"
                     } else if (msg.startsWith("#预约")) {
                         order = "#预约"
+                    } else if (msg.startsWith("#帮忙预约")) {
+                        order = "#帮忙预约"
                     }
                     when(order) {
                         "#指令" -> it.group.sendMessage(PlainText(printOrderArray()))
@@ -91,6 +93,8 @@ suspend fun main() {
                         orderArray[2] -> it.group.sendMessage(PlainText(bookBoss(this.sender.id,msg)))
                         orderArray[3] -> it.group.sendMessage(PlainText(bossNameInfo.toString()))
                         orderArray[4] -> {initBossInfo();it.group.sendMessage(PlainText("刷新成功"))}
+                        orderArray[5] -> it.group.sendMessage(PlainText(helpBookBoss(msg)))
+                        orderArray[6] -> printBookBossInfo(miraiBot)
                         else -> {
                             it.group.sendMessage(PlainText("指令有误，翻乡下种番薯啦你"))
                         }
@@ -228,9 +232,9 @@ suspend fun scheduleBoss(miraiBot:Bot){
                             miraiBot.getGroup(listenerGroupId).sendMessage("@血量变更播报")
                             miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
                         }
+                        currentBossName = bossName
+                        currentLife = current_life
                     }
-                    currentBossName = bossName
-                    currentLife = current_life
                 }
             }
         }
@@ -265,7 +269,7 @@ fun initBossInfo(){
 }
 
 fun bookBoss(id:Long,msg:String):String{
-    var s = msg.substringAfter("#预约")
+    var s = msg.substringAfter(orderArray[2])
     if (s.isNotBlank()) {
         when(s){
             "1" -> bookBoss1.add(id)
@@ -281,7 +285,7 @@ fun bookBoss(id:Long,msg:String):String{
 
 fun printOrderArray():String{
     var str = ""
-    orderArray.forEach { item ->  str+= item}
+    orderArray.forEach { item ->  str+= "$item "}
     return str
 }
 
@@ -325,10 +329,60 @@ suspend fun getGuildStatus(miraiBot:Bot){
     if (guildInfo != null) {
         val bossName = guildInfo.boss_info?.name
         val current_life = guildInfo.boss_info?.current_life
-        if (bossName != null) {
+        if (bossName != null && bossName != currentBossName) {
             callBooker(bossName,miraiBot)
         }
         currentBossName = bossName
         currentLife = current_life
     }
 }
+
+/**
+ * #帮忙预约
+ */
+fun helpBookBoss(msg:String):String{
+    var errorFormatMsg = "指令格式有误 #帮助预约[BOSS序号][空格][QQ号，多个以逗号分隔]"
+    var strs = msg.split(" ")
+    if (strs.size != 2) {
+        return errorFormatMsg
+    }
+    try {
+        var bossNum = strs[0].substringAfter(orderArray[5]).toInt()
+        var bookers = strs[1].split(",")
+        for (index in bookers.indices) {
+            bookBoss(bookers[index].toLong(),orderArray[2]+bossNum)
+        }
+    } catch (e:java.lang.Exception) {
+        return errorFormatMsg
+    }
+    return "预约成功"
+}
+
+suspend fun printBookBossInfo(miraiBot:Bot){
+    for (index in 1..4) {
+        var msg = "预约BOSS$index "
+        var bookBossList:MutableList<Long> =mutableListOf()
+        when (index) {
+            0 -> bookBossList = bookBoss1
+            1 -> bookBossList = bookBoss2
+            2 -> bookBossList = bookBoss3
+            3 -> bookBossList = bookBoss4
+            4 -> bookBossList = bookBoss5
+        }
+        for (bossNum in bookBossList.indices) {
+            try {
+                val name = miraiBot.getGroup(listenerGroupId).get(bookBossList[bossNum]).nameCard
+                val bookerNum = bookBossList[bossNum]
+                msg += "$name($bookerNum) "
+            } catch (e:java.lang.Exception) {
+                continue
+            }
+        }
+        if (msg != "预约BOSS$index ") {
+            miraiBot.getGroup(listenerGroupId).sendMessage(msg)
+        }
+    }
+
+
+}
+
