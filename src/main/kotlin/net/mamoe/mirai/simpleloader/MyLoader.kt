@@ -360,7 +360,8 @@ fun helpBookBoss(msg:String):String{
 
 suspend fun printBookBossInfo(miraiBot:Bot){
     for (index in 1..4) {
-        var msg = "预约BOSS$index "
+        var realBossNum = index+1
+        var msg = "预约BOSS$realBossNum "
         var bookBossList:MutableList<Long> =mutableListOf()
         when (index) {
             0 -> bookBossList = bookBoss1
@@ -378,7 +379,7 @@ suspend fun printBookBossInfo(miraiBot:Bot){
                 continue
             }
         }
-        if (msg != "预约BOSS$index ") {
+        if (msg != "预约BOSS$realBossNum ") {
             miraiBot.getGroup(listenerGroupId).sendMessage(msg)
         }
     }
