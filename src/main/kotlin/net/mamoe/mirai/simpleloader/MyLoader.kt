@@ -25,6 +25,7 @@ import net.mamoe.mirai.utils.BotConfiguration
 import okhttp3.CookieJar
 import util.Http
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
@@ -215,7 +216,13 @@ suspend fun scheduleBoss(miraiBot:Bot){
                 endDate = null
                 starrDate = null
             }
+            //公会战期内
             if (endDate !=null && LocalDate.now().isBefore(endDate.plusDays(1))  && LocalDate.now().isAfter(starrDate?.minusDays(1))) {
+                //凌晨五至五点十分
+                if (LocalDateTime.now().hour == 4 && LocalDateTime.now().minute < 9) {
+                    miraiBot.getGroup(listenerGroupId).sendMessage("@五点状态播报")
+                    miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
+                }
                 println("=====================启动定时查询BOSS协程======================")
                 val guildInfo = getGuildInfoData()
                 if (guildInfo != null) {
@@ -359,6 +366,7 @@ fun helpBookBoss(msg:String):String{
 }
 
 suspend fun printBookBossInfo(miraiBot:Bot){
+    var msgSendFlag = false
     for (index in 1..4) {
         var realBossNum = index+1
         var msg = "预约BOSS$realBossNum "
@@ -381,9 +389,13 @@ suspend fun printBookBossInfo(miraiBot:Bot){
         }
         if (msg != "预约BOSS$realBossNum ") {
             miraiBot.getGroup(listenerGroupId).sendMessage(msg)
+        } else {
+            msgSendFlag = true
         }
     }
-
+    if (msgSendFlag) {
+        miraiBot.getGroup(listenerGroupId).sendMessage("暂无预约")
+    }
 
 }
 
