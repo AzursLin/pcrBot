@@ -367,16 +367,16 @@ fun helpBookBoss(msg:String):String{
 
 suspend fun printBookBossInfo(miraiBot:Bot){
     var msgSendFlag = false
-    for (index in 1..4) {
-        var realBossNum = index+1
+    for (index in 1..5) {
+        var realBossNum = index
         var msg = "预约BOSS$realBossNum "
         var bookBossList:MutableList<Long> =mutableListOf()
         when (index) {
-            0 -> bookBossList = bookBoss1
-            1 -> bookBossList = bookBoss2
-            2 -> bookBossList = bookBoss3
-            3 -> bookBossList = bookBoss4
-            4 -> bookBossList = bookBoss5
+            1 -> bookBossList = bookBoss1
+            2 -> bookBossList = bookBoss2
+            3 -> bookBossList = bookBoss3
+            4 -> bookBossList = bookBoss4
+            5 -> bookBossList = bookBoss5
         }
         for (bossNum in bookBossList.indices) {
             try {
@@ -389,11 +389,10 @@ suspend fun printBookBossInfo(miraiBot:Bot){
         }
         if (msg != "预约BOSS$realBossNum ") {
             miraiBot.getGroup(listenerGroupId).sendMessage(msg)
-        } else {
             msgSendFlag = true
         }
     }
-    if (msgSendFlag) {
+    if (!msgSendFlag) {
         miraiBot.getGroup(listenerGroupId).sendMessage("暂无预约")
     }
 
