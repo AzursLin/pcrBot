@@ -219,7 +219,7 @@ suspend fun scheduleBoss(miraiBot:Bot){
             //公会战期内
             if (endDate !=null && LocalDate.now().isBefore(endDate.plusDays(1))  && LocalDate.now().isAfter(starrDate?.minusDays(1))) {
                 //凌晨五至五点十分
-                if (LocalDateTime.now().hour == 4 && LocalDateTime.now().minute < 9) {
+                if (LocalDateTime.now().hour == 5 && LocalDateTime.now().minute < 9) {
                     miraiBot.getGroup(listenerGroupId).sendMessage("@五点状态播报")
                     miraiBot.getGroup(listenerGroupId).sendMessage(getGuildInfoStr())
                 }
