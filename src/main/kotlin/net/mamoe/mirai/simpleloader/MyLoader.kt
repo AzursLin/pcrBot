@@ -1,10 +1,7 @@
 package net.mamoe.mirai.simpleloader
 
 import com.google.gson.Gson
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import model.BossInfo
 import model.GuildInfo
 import model.GuildInfoData
 import net.mamoe.mirai.Bot
@@ -27,8 +24,7 @@ import util.Http
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
-import kotlin.concurrent.fixedRateTimer
+import kotlin.random.Random
 
 //=================Config============================
 //Bot的QQ号
@@ -197,8 +193,10 @@ class GroupData{
 
 suspend fun scheduleBoss(miraiBot:Bot){
     while (true) {
-        delay(450000L)
+        val delayTime = getDelayTime()
+        delay(delayTime)
         println("=====================进入定时查询BOSS协程======================")
+        println("本次延迟$delayTime")
         if (dateEnd!!.isEmpty()) {
             val guildInfo = getGuildInfoData()
             if(guildInfo != null) {
@@ -228,6 +226,7 @@ suspend fun scheduleBoss(miraiBot:Bot){
                 if (guildInfo != null) {
                     val bossName = guildInfo.boss_info?.name
                     val current_life = guildInfo.boss_info?.current_life
+                    println("当前$currentBossName 血量$currentLife======= 查询结果$bossName 血量$current_life")
                     //预约提醒
                     if (bossName != null) {
                         if (currentBossName != bossName) {
@@ -398,3 +397,14 @@ suspend fun printBookBossInfo(miraiBot:Bot){
 
 }
 
+fun getDelayTime():Long{
+    val delayTime = 60000L
+    var a:Int
+    //凌晨一点至八点
+    if (LocalDateTime.now().hour in 0..8) {
+        a = Random.nextInt(0, 300000)
+    } else {
+        a = Random.nextInt(0, 60000)
+    }
+    return delayTime+a
+}
